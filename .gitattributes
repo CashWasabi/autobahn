@@ -1,0 +1,3 @@
+# Keep LF line endings on every platform.
+# Git on Windows would check files out with CRLF, and zig fmt rejects CRLF.
+* text=auto eol=lf

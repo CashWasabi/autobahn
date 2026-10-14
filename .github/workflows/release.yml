@@ -1,0 +1,48 @@
+# Checks a release.
+# It runs when a version tag such as 0.6.1 is pushed.
+# The tag must point at a commit on main.
+name: release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  on-main:
+    name: tag is on main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check the tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+  test:
+    name: test (${{ matrix.os }})
+    needs: on-main
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+      - name: Format
+        run: zig fmt --check src examples build.zig build.zig.zon
+      - name: Test
+        run: zig build test
+      - name: Test, optimised
+        run: zig build test -Doptimize=ReleaseFast
+      - name: Build the examples
+        run: zig build
+      - name: Run the examples
+        shell: bash
+        run: |
+          for name in hello phases even_split uneven_split tasks search groups simd demo; do
+            zig build "run_$name"
+          done
